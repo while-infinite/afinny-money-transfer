@@ -1,0 +1,78 @@
+spring:
+  application:
+    name: ${APPLICATION_NAME:money-transfer}
+
+  # Data Source properties
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://172.17.1.4:5432/afinny?currentSchema=${spring.application.name}}
+    platform: postgres
+    username": ${DB_LOGIN:postgres}
+    password: ${DB_PASSWORD:postgres}
+    hikari:
+      maximum-pool-size: ${DATASOURCE_POOL_MAX_SIZE:10}
+      minimum-idle: ${DATASOURCE_POOL_MIN_IDLE:1}
+
+  zipkin:
+    baseUrl: ${TRACING_BASEURL:http://localhost:9411/}
+    sender:
+      type: ${TRACING_SENDER_TYPE:kafka}
+    kafka:
+      topic: ${TRACING_KAFKA_TOPIC:tracing_topic}
+    service:
+      name: ${TRACING_SERVICE_NAME:dev-money-transfer}
+  sleuth:
+    sampler:
+      probability: 1
+
+  #Kafka
+  kafka:
+    bootstrap-servers: ${KAFKA_BROKERS:172.17.1.4:9092}
+    producer:
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+    consumer:
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring:
+          json:
+            trusted:
+              packages: "by.afinny.moneytransfer.dto.kafka"
+    topics:
+      producer-transfer-order-event-sender:
+        path: "money_transfer_to_master_update_transfer_order"
+        enabled: true
+      consumer-transfer-order-event-listener:
+        path: "master_to_money_transfer_update_transfer_order"
+        enabled: true
+      create-new-payment-producer:
+        path: "money_transfer_to_master_create_payment"
+        enabled: true
+      create-new-payment-listener:
+        path: "master_to_money_transfer_create_payment"
+        enabled: true
+
+
+# Actuator
+management:
+  endpoints:
+    web:
+      exposure.include: beans, env, health, info, metrics, mappings
+  endpoint:
+    health:
+      show-details: always
+      probes:
+        enabled: true
+  health:
+    livenessState:
+      enabled: true
+    readinessState:
+      enabled: true
+
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: ${EUREKA_URL:http://eureka-service:8761/eureka}
+  instance:
+    prefer-ip-address: true
+feign:
+  httpclient:
+    enabled: true
